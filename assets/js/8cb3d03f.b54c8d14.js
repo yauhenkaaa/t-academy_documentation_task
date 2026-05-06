@@ -1,0 +1,1 @@
+"use strict";(globalThis.webpackChunkantifraud_docs=globalThis.webpackChunkantifraud_docs||[]).push([[882],{8688(s){s.exports=JSON.parse('{"name":"docusaurus-plugin-content-docs","id":"style_guide"}')}}]);
