@@ -1,0 +1,383 @@
+openapi: 3.0.3
+info:
+  title: Call Analysis System API
+  description: >
+    Спецификация источников данных для реализации экранов /main и /whitelist.
+  version: 1.0.0
+  contact:
+    name: Курсовой проект
+
+servers:
+  - url: https://api.callsys.local/v1
+
+paths:
+  /users/me:
+    get:
+      tags: [Header]
+      summary: Получить профиль текущего пользователя
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /notifications/unread:
+    get:
+      tags: [Header]
+      summary: Получить счётчик и список непрочитанных уведомлений
+      operationId: getUnreadNotifications
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationSummary'
+
+  /calls:
+    get:
+      tags: [Calls]
+      summary: Получить ленту последних вызовов
+      operationId: listCalls
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 5, maximum: 50, default: 10 }
+          description: Количество записей на странице
+        - name: sort
+          in: query
+          required: false
+          schema: { type: string, enum: [timestamp_desc, threat_desc], default: threat_desc }
+          description: Критерий сортировки списка
+      responses:
+        '200':
+          description: Пагинированный список вызовов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCallResponse'
+
+  /calls/{id}/audio:
+    get:
+      tags: [Calls]
+      summary: Получить аудиофайл или URL потока вызова
+      operationId: getCallAudio
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+          description: Уникальный идентификатор вызова
+      responses:
+        '200':
+          description: URL аудио или бинарный поток
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  audioUrl: { type: string, format: uri }
+                  duration: { type: integer, minimum: 0 }
+
+  /calls/{id}/status:
+    post:
+      tags: [Calls]
+      summary: Изменить статус вызова (блокировка/разрешение)
+      operationId: updateCallStatus
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCallStatusRequest'
+      responses:
+        '200':
+          description: Статус обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Call'
+
+  /numbers/{id}/tag:
+    post:
+      tags: [Calls]
+      summary: Маркировать номер вызова
+      operationId: tagCallNumber
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+          description: Идентификатор вызова/номера
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TagNumberRequest'
+      responses:
+        '200':
+          description: Маркировка применена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Call'
+  /whitelist:
+    get:
+      tags: [Whitelist]
+      summary: Получить список записей белого списка с фильтрацией
+      operationId: getWhitelist
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, default: 1 }
+          description: Номер страницы
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 10, maximum: 100, default: 20 }
+          description: Записей на страницу
+        - name: search
+          in: query
+          required: false
+          schema: { type: string, minLength: 1, maxLength: 30 }
+          description: Фильтр по номеру телефона или комментарию
+      responses:
+        '200':
+          description: Пагинированный список записей
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedWhitelistResponse'
+
+    post:
+      tags: [Whitelist]
+      summary: Добавить номер в белый список
+      operationId: createWhitelistEntry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWhitelistRequest'
+      responses:
+        '201':
+          description: Запись успешно создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WhitelistEntry'
+
+  /whitelist/{id}:
+    put:
+      tags: [Whitelist]
+      summary: Обновить запись белого списка
+      operationId: updateWhitelistEntry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWhitelistRequest'
+      responses:
+        '200':
+          description: Обновлённая запись
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WhitelistEntry'
+
+    delete:
+      tags: [Whitelist]
+      summary: Удалить запись из белого списка
+      operationId: deleteWhitelistEntry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: Успешно удалено
+
+components:
+  schemas:
+    CallStatus:
+      type: string
+      enum: [PENDING, ANALYZING, ALLOWED, BLOCKED, SUSPICIOUS]
+      description: Статус обработки вызова
+
+    CallDirection:
+      type: string
+      enum: [INCOMING, OUTGOING, MISSED]
+      description: Направление вызова
+
+    TagCategory:
+      type: string
+      enum: [SPAM, FRAUD, SERVICE, SAFE, OTHER]
+      description: Категория маркировки номера
+
+    UserRole:
+      type: string
+      enum: [USER, GROUP_MEMBER, ADMIN]
+      description: Роль пользователя
+
+    ActionType:
+      type: string
+      enum: [PLAY_AUDIO, BLOCK, ALLOW, MARK, ADD_TO_WHITELIST]
+      description: Доступное действие для вызова
+
+    AnalysisResult:
+      type: object
+      required: [threatLevel, confidence, systemTags]
+      properties:
+        threatLevel:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, CRITICAL]
+        confidence:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+        systemTags:
+          type: array
+          items: { type: string }
+          description: Автоматические метки от системы анализа
+
+    AddedByInfo:
+      type: object
+      required: [userId, username, role]
+      properties:
+        userId: { type: string, format: uuid }
+        username: { type: string }
+        role: { $ref: '#/components/schemas/UserRole' }
+
+    PaginationMeta:
+      type: object
+      required: [page, limit, total, hasNext]
+      properties:
+        page: { type: integer }
+        limit: { type: integer }
+        total: { type: integer }
+        hasNext: { type: boolean }
+
+    User:
+      type: object
+      required: [id, username, role]
+      properties:
+        id: { type: string, format: uuid }
+        username: { type: string }
+        role: { $ref: '#/components/schemas/UserRole' }
+        avatarUrl: { type: string, format: uri, nullable: true }
+
+    Notification:
+      type: object
+      required: [id, message, type, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        message: { type: string }
+        type: { type: string, enum: [INFO, WARNING, ALERT] }
+        createdAt: { type: string, format: date-time }
+
+    NotificationSummary:
+      type: object
+      required: [unreadCount, items]
+      properties:
+        unreadCount: { type: integer, minimum: 0 }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Notification' }
+
+    Call:
+      type: object
+      required: [id, phoneNumber, timestamp, status, direction, analysisResult]
+      properties:
+        id: { type: string, format: uuid }
+        phoneNumber: { type: string, pattern: '^\+\d{10,15}$' }
+        timestamp: { type: string, format: date-time }
+        status: { $ref: '#/components/schemas/CallStatus' }
+        direction: { $ref: '#/components/schemas/CallDirection' }
+        analysisResult: { $ref: '#/components/schemas/AnalysisResult' }
+        availableActions:
+          type: array
+          items: { $ref: '#/components/schemas/ActionType' }
+        audioUrl: { type: string, format: uri, nullable: true }
+
+    WhitelistEntry:
+      type: object
+      required: [id, phoneNumber, createdAt, addedBy]
+      properties:
+        id: { type: string, format: uuid }
+        phoneNumber: { type: string, pattern: '^\+\d{10,15}$' }
+        comment: { type: string, maxLength: 255, nullable: true }
+        applyToGroup: { type: boolean, default: false }
+        createdAt: { type: string, format: date-time }
+        addedBy: { $ref: '#/components/schemas/AddedByInfo' }
+        userTags:
+          type: array
+          items: { type: string }
+          description: Пользовательские метки записи
+
+    UpdateCallStatusRequest:
+      type: object
+      required: [action]
+      properties:
+        action:
+          type: string
+          enum: [BLOCK, ALLOW, UNBLOCK]
+        reason: { type: string, maxLength: 100, nullable: true }
+
+    TagNumberRequest:
+      type: object
+      required: [tag]
+      properties:
+        tag:
+          $ref: '#/components/schemas/TagCategory'
+
+    CreateWhitelistRequest:
+      type: object
+      required: [phoneNumber]
+      properties:
+        phoneNumber: { type: string, pattern: '^\+\d{10,15}$' }
+        comment: { type: string, maxLength: 255 }
+        applyToGroup: { type: boolean, default: false }
+
+    UpdateWhitelistRequest:
+      type: object
+      properties:
+        comment: { type: string, maxLength: 255 }
+        applyToGroup: { type: boolean }
+        userTags:
+          type: array
+          items: { type: string }
+
+    PaginatedCallResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/Call' }
+        meta: { $ref: '#/components/schemas/PaginationMeta' }
+
+    PaginatedWhitelistResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/WhitelistEntry' }
+        meta: { $ref: '#/components/schemas/PaginationMeta' }
