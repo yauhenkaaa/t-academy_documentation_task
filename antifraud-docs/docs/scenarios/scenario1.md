@@ -1,67 +1,41 @@
 ---
-title: Сценарий №1
+title: Создание группы безопасности
 sidebar_position: 1
 hide_table_of_contents: false
 ---
 
-## C1 — Контекстная диаграмма
-
-Диаграмма показывает систему HeroTask в окружении внешних участников и сервисов.
+# Создание группы безопасности
 
 ```plantuml
 @startuml
-!define RECTANGLE class
+actor User as "Пользователь"
+participant System as "Система"
+database DB as "База данных"
 
-actor "Диспетчер" as dispatcher
-actor "Супергерой" as hero
-
-rectangle "HeroTask System" as herotask {
-}
-
-rectangle "Alert Service\n(внешний)" as alert
-rectangle "Map API\n(внешний)" as maps
-rectangle "Notification Service\n(внешний)" as notify
-
-dispatcher --> herotask : регистрирует инциденты,\nназначает героев
-hero --> herotask : обновляет статус задачи
-alert --> herotask : входящие сигналы об угрозах
-herotask --> maps : геолокация инцидентов
-herotask --> notify : push-уведомления герою
-
+User -> System: Нажать "Создать группу"
+System -> System: Проверка прав (подписка)
+System -> User: Запрос названия группы
+User -> System: Ввод названия
+System -> DB: Сохранение данных группы
+System -> User: Сообщение об успехе
 @enduml
 ```
 
-## C2 — Контейнерная диаграмма
+## Описание
+Позволяет пользователю объединить несколько аккаунтов в единый контур защиты для совместного реагирования на угрозы.
 
-Диаграмма раскрывает внутренние компоненты системы HeroTask и их взаимодействие.
+## Участники
+*   **Пользователь:** Инициирует создание.
+*   **Система:** Валидирует данные и создает запись в БД.
 
-```plantuml
-@startuml
-actor "Диспетчер" as dispatcher
+## Основной поток
+1. Пользователь выбирает «Создать группу».
+2. Система открывает список контактов.
+3. Пользователь выбирает участников.
+4. Система проверяет лимиты подписки.
+5. Пользователь вводит название группы.
+6. Система сохраняет данные (название, ID создателя, зашифрованные номера).
 
-rectangle "Frontend\n[React 18]" as frontend
-rectangle "Backend API\n[Spring Boot 3]" as backend
-database "PostgreSQL 15\n[основное хранилище]" as db
-rectangle "Redis 7\n[кэш, сессии]" as redis
-rectangle "Kafka 3\n[очередь событий]" as kafka
-rectangle "Notification Worker\n[Spring Boot]" as worker
-
-dispatcher --> frontend : HTTPS
-frontend --> backend : REST API
-backend --> db : SQL
-backend --> redis : кэширование\nстатусов
-backend --> kafka : события\n(task_assigned, task_done)
-kafka --> worker : подписка
-worker --> dispatcher : push-уведомления
-
-@enduml
-```
-
-## Внешние зависимости
-
-| Сервис | Тип интеграции | Описание |
-| ------ | -------------- | -------- |
-| Alert Service | REST (входящий) | Автоматическая передача сигналов о новых угрозах |
-| Map API (Yandex Maps) | REST (исходящий) | Геолокация и маршруты к инцидентам |
-| Notification Service | Kafka (исходящий) | Push-уведомления на устройства супергероев |
-| Yandex Cloud S3 | SDK (исходящий) | Хранение фотографий профилей героев |
+## Исключительные ситуации
+*   **Пользователь не авторизован:** Перенаправление на страницу регистрации.
+*   **Превышение лимита участников:** Вывод всплывающего окна с предложением расширить подписку.

@@ -1,67 +1,38 @@
 ---
-title: Сценарий №2
+title: Отправка Push-уведомления
 sidebar_position: 2
 hide_table_of_contents: false
 ---
 
-## C1 — Контекстная диаграмма
-
-Диаграмма показывает систему HeroTask в окружении внешних участников и сервисов.
+# Отправка уведомления
 
 ```plantuml
 @startuml
-!define RECTANGLE class
+participant ML as "ML-система"
+participant Core as "Ядро системы"
+participant Push as "Сервер Push"
+actor User as "Пользователь"
 
-actor "Диспетчер" as dispatcher
-actor "Супергерой" as hero
-
-rectangle "HeroTask System" as herotask {
-}
-
-rectangle "Alert Service\n(внешний)" as alert
-rectangle "Map API\n(внешний)" as maps
-rectangle "Notification Service\n(внешний)" as notify
-
-dispatcher --> herotask : регистрирует инциденты,\nназначает героев
-hero --> herotask : обновляет статус задачи
-alert --> herotask : входящие сигналы об угрозах
-herotask --> maps : геолокация инцидентов
-herotask --> notify : push-уведомления герою
-
+ML -> Core: Угроза обнаружена (High Risk)
+Core -> Core: Формирование payload
+Core -> Push: Запрос на отправку
+Push -> User: Push-уведомление
+User -> User: Просмотр предупреждения
 @enduml
 ```
+## Описание
+Автоматическое оповещение пользователя при обнаружении системой потенциально мошеннического вызова.
 
-## C2 — Контейнерная диаграмма
+## Участники
+*   **Система:** Детектирует угрозу и инициирует отправку.
+*   **Пользователь:** Получает уведомление на устройство.
 
-Диаграмма раскрывает внутренние компоненты системы HeroTask и их взаимодействие.
+## Основной поток
+1. Система анализирует входящий вызов в реальном времени.
+2. При обнаружении угрозы формируется payload с уровнем риска.
+3. Запрос отправляется на сервер Push-уведомлений.
+4. Уведомление отображается на экране блокировки пользователя.
 
-```plantuml
-@startuml
-actor "Диспетчер" as dispatcher
-
-rectangle "Frontend\n[React 18]" as frontend
-rectangle "Backend API\n[Spring Boot 3]" as backend
-database "PostgreSQL 15\n[основное хранилище]" as db
-rectangle "Redis 7\n[кэш, сессии]" as redis
-rectangle "Kafka 3\n[очередь событий]" as kafka
-rectangle "Notification Worker\n[Spring Boot]" as worker
-
-dispatcher --> frontend : HTTPS
-frontend --> backend : REST API
-backend --> db : SQL
-backend --> redis : кэширование\nстатусов
-backend --> kafka : события\n(task_assigned, task_done)
-kafka --> worker : подписка
-worker --> dispatcher : push-уведомления
-
-@enduml
-```
-
-## Внешние зависимости
-
-| Сервис | Тип интеграции | Описание |
-| ------ | -------------- | -------- |
-| Alert Service | REST (входящий) | Автоматическая передача сигналов о новых угрозах |
-| Map API (Yandex Maps) | REST (исходящий) | Геолокация и маршруты к инцидентам |
-| Notification Service | Kafka (исходящий) | Push-уведомления на устройства супергероев |
-| Yandex Cloud S3 | SDK (исходящий) | Хранение фотографий профилей героев |
+## Исключительные ситуации
+*   **Нет интернета:** Система активирует локальный звуковой сигнал (если есть доступ к телефонии).
+*   **Уведомления отключены:** Система фиксирует статус в профиле и пропускает этап отправки.

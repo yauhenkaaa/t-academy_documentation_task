@@ -2,66 +2,36 @@
 title: Модель данных
 sidebar_position: 1
 hide_table_of_contents: false
+
 ---
+import Drawio from '@theme/Drawio'
+import diagram from '!!raw-loader!./dbmodel.drawio';
 
-## C1 — Контекстная диаграмма
+<Drawio content={diagram} editable={false} />
+# Модель данных
 
-Диаграмма показывает систему HeroTask в окружении внешних участников и сервисов.
+## Описание сущностей
 
-```plantuml
-@startuml
-!define RECTANGLE class
+### 1. User (Пользователь)
+Хранит информацию об аккаунте и настройках доступа.
+| Поле | Тип | Описание |
+| :--- | :--- | :--- |
+| id | UUID | Первичный ключ |
+| username | VARCHAR | Имя пользователя |
+| role | ENUM | Роль (USER, GROUP_MEMBER, ADMIN) |
 
-actor "Диспетчер" as dispatcher
-actor "Супергерой" as hero
+### 2. Call (Информация о звонке)
+Центральная сущность для анализа угроз.
+| Поле | Тип | Описание |
+| :--- | :--- | :--- |
+| id | UUID | Первичный ключ |
+| user_id | UUID | Внешний ключ (User) |
+| status | ENUM | Статус (PENDING, ANALYZING, BLOCKED) |
+| analysis_result | JSONB | Результаты ML-анализа |
 
-rectangle "HeroTask System" as herotask {
-}
-
-rectangle "Alert Service\n(внешний)" as alert
-rectangle "Map API\n(внешний)" as maps
-rectangle "Notification Service\n(внешний)" as notify
-
-dispatcher --> herotask : регистрирует инциденты,\nназначает героев
-hero --> herotask : обновляет статус задачи
-alert --> herotask : входящие сигналы об угрозах
-herotask --> maps : геолокация инцидентов
-herotask --> notify : push-уведомления герою
-
-@enduml
-```
-
-## C2 — Контейнерная диаграмма
-
-Диаграмма раскрывает внутренние компоненты системы HeroTask и их взаимодействие.
-
-```plantuml
-@startuml
-actor "Диспетчер" as dispatcher
-
-rectangle "Frontend\n[React 18]" as frontend
-rectangle "Backend API\n[Spring Boot 3]" as backend
-database "PostgreSQL 15\n[основное хранилище]" as db
-rectangle "Redis 7\n[кэш, сессии]" as redis
-rectangle "Kafka 3\n[очередь событий]" as kafka
-rectangle "Notification Worker\n[Spring Boot]" as worker
-
-dispatcher --> frontend : HTTPS
-frontend --> backend : REST API
-backend --> db : SQL
-backend --> redis : кэширование\nстатусов
-backend --> kafka : события\n(task_assigned, task_done)
-kafka --> worker : подписка
-worker --> dispatcher : push-уведомления
-
-@enduml
-```
-
-## Внешние зависимости
-
-| Сервис | Тип интеграции | Описание |
-| ------ | -------------- | -------- |
-| Alert Service | REST (входящий) | Автоматическая передача сигналов о новых угрозах |
-| Map API (Yandex Maps) | REST (исходящий) | Геолокация и маршруты к инцидентам |
-| Notification Service | Kafka (исходящий) | Push-уведомления на устройства супергероев |
-| Yandex Cloud S3 | SDK (исходящий) | Хранение фотографий профилей героев |
+### 3. Whitelist_Entry (Белый список)
+| Поле | Тип | Описание |
+| :--- | :--- | :--- |
+| id | UUID | Первичный ключ |
+| phone_number | VARCHAR | Номер телефона |
+| apply_to_group | BOOLEAN | Флаг применения к группе |

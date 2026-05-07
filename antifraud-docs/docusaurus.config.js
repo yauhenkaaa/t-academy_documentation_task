@@ -90,11 +90,6 @@ const config = {
             position: 'left',
           },
           {
-            to: '/style_guide/',
-            label: 'Style Guide',
-            position: 'left',
-          },
-          {
             href: 'https://github.com/yauhenkaaa/t-academy_documentation_task',
             label: 'GitHub',
             position: 'right',
@@ -117,17 +112,13 @@ const config = {
               },
               {
                 label: 'API Reference',
-                to: '/docs/API/herotask',
+                to: '/docs/API/specs',
               },
             ],
           },
           {
             title: 'Для авторов',
             items: [
-              {
-                label: 'Style Guide',
-                to: '/style_guide/',
-              },
               {
                 label: 'Репозиторий',
                 href: 'https://github.com/yauhenkaaa/t-academy_documentation_task',

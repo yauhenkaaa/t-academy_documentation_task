@@ -1,11 +1,3 @@
----
-title: Спецификация API
-sidebar_position: 1
-hide_table_of_contents: false
----
-
-## Спецификация (OpenAPI)
-```yaml
 openapi: 3.0.3
 info:
   title: Call Analysis System API
@@ -389,4 +381,3 @@ components:
           type: array
           items: { $ref: '#/components/schemas/WhitelistEntry' }
         meta: { $ref: '#/components/schemas/PaginationMeta' }
-```
